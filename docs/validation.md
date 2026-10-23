@@ -31,7 +31,9 @@ The local tool versions for dnsmasq and nftables are distribution binaries, not 
 
 For implementation commit [`553e407`](https://github.com/josephluopooh/router_nix/commit/553e407c2bff76fd3196571fbaf79efdd6a73493), [workflow run 39982556348](https://github.com/josephluopooh/router_nix/actions/runs/39982556348) passed its `config` job. This independently ran `nix flake check --no-build` against the committed lock file, then built the configuration-evaluation, Python policy, and pinned sing-box schema checks. The runner confirmed `/dev/kvm` exists for the separate VM job.
 
-At **2026-10-23 16:12 UTC**, the VM job was still in progress and GitHub had not exposed its completed log. Its build/test outcome is **pending**, not passed. The generated configurations for both test sites also passed the site validator independently in cloud. Consult the linked workflow for its eventual result before treating end-to-end routing as validated.
+The first VM run **failed** at 16:13 UTC while trying the direct-domain HTTP request. DNS and LAN interception had reached sing-box, which timed out connecting to `198.51.100.10:8080`. The fixture declared its fake public addresses on loopback, but its scripted-networking guest never started the loopback address service. Its Ethernet address was configured normally. The fixture now places those fake public addresses on that Ethernet interface and checks the origin from both the Internet guest and router before testing LAN policy. No production firewall rule was relaxed. Network retries are bounded at 60 seconds, with addresses, routes, listeners, rules and service journals collected on failure. Replacement VM validation is required before claiming an end-to-end pass.
+
+The generated configurations for both test sites also passed the site validator independently in cloud.
 
 ## Automated checks provided
 
