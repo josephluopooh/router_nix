@@ -27,13 +27,19 @@ Cloud implementation and checks performed on 2026-10-23. This document separates
 
 The local tool versions for dnsmasq and nftables are distribution binaries, not a realization of the pinned nixpkgs packages. The sing-box binary has extra upstream build tags compared with nixpkgs; the configuration uses features present in both. CI checks the actual pinned packages.
 
+## GitHub Actions execution
+
+For implementation commit [`553e407`](https://github.com/josephluopooh/router_nix/commit/553e407c2bff76fd3196571fbaf79efdd6a73493), [workflow run 39982556348](https://github.com/josephluopooh/router_nix/actions/runs/39982556348) passed its `config` job. This independently ran `nix flake check --no-build` against the committed lock file, then built the configuration-evaluation, Python policy, and pinned sing-box schema checks. The runner confirmed `/dev/kvm` exists for the separate VM job.
+
+At **2026-10-23 16:12 UTC**, the VM job was still in progress and GitHub had not exposed its completed log. Its build/test outcome is **pending**, not passed. The generated configurations for both test sites also passed the site validator independently in cloud. Consult the linked workflow for its eventual result before treating end-to-end routing as validated.
+
 ## Automated checks provided
 
 `nix flake check --no-build` evaluates all exposed outputs. `checks.x86_64-linux.configuration` forces the full example and optional-hostapd NixOS derivations. The Python suite rejects invalid/overlapping LAN, WAN and peer routes, conflicting domain/CIDR policy, FakeIP bypass, unsafe DNS recursion, store-resident secrets, and inappropriate proxy outbound objects. The rendered proxy configuration is checked using `pkgs.sing-box`.
 
 `checks.x86_64-linux.router-vm` boots five isolated NixOS machines: router A, router B, a DHCP LAN client, a remote LAN client, and a fake Internet/DNS/SOCKS server. It checks DHCP, local management, WAN port blocking, IPv6 policy, policy routing, redirected DNS, FakeIP answers, direct/proxy domain and IP routing via observed source addresses, basic NAT, bidirectional WireGuard site traffic without NAT, and proxy outage/restart behavior. Its public test keys and fake Internet addresses are fixtures, not production credentials.
 
-The GitHub workflow runs these checks on an isolated Linux runner, without router credentials or deployment steps. A written test or successfully evaluated derivation is not evidence that packets passed. Consult the workflow result for the published commit; no CI or VM success is claimed here until execution is observed.
+The GitHub workflow runs these checks on an isolated Linux runner, without router credentials or deployment steps. A written test or successfully evaluated derivation is not evidence that packets passed. The observed configuration-check result is recorded above; no VM success is claimed without its completed result.
 
 Physical NIC identity, disk/boot layout, ISP connectivity, Wi-Fi radio/regulatory operation, real endpoint reachability, actual US egress location, and throughput require the intended hardware and real site parameters. They are intentionally not inferred from cloud tests.
 
