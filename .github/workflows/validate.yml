@@ -1,0 +1,28 @@
+name: Validate router
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  config:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
+      - run: nix flake check --no-build
+      - run: nix build .#checks.x86_64-linux.configuration .#checks.x86_64-linux.policy .#checks.x86_64-linux.sing-box-config -L
+  vm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771 # v31
+        with:
+          extra_nix_config: |
+            system-features = nixos-test benchmark big-parallel kvm
+      - name: Verify VM acceleration
+        run: test -e /dev/kvm
+      - run: nix build .#checks.x86_64-linux.router-vm -L

@@ -1,0 +1,8 @@
+/result*
+/secrets/
+*.key
+*.pem
+*.age
+__pycache__/
+*.pyc
+/validation-output/
