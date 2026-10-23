@@ -1,6 +1,6 @@
 # Validation evidence
 
-Cloud implementation and checks performed on 2026-10-23. This document separates evaluation, executable configuration checks, and real network tests.
+Both GitHub Actions jobs passed on 2026-10-23 for code commit `2cff040`: configuration checks and the complete five-VM network integration test. [Successful workflow run](https://github.com/josephluopooh/router_nix/actions/runs/39986253394). This document distinguishes workspace checks, executed VM tests, and hardware-specific validation.
 
 ## Cloud environment
 
@@ -9,7 +9,7 @@ Cloud implementation and checks performed on 2026-10-23. This document separates
 - nixpkgs was fetched at `da6dc0e7b26060f2f71ce3ef7088fb56ee44fa36`. Its computed source NAR hash matches `flake.lock`: `sha256-MlvRfa1O5Cqc2/a+gG+l9TSuowEoCKCmrJ1d9oAVm0I=`.
 - The ordinary cloud proxy blocks `releases.nixos.org` and `cache.nixos.org` with HTTP 403, including an attempted approved download. No `/dev/kvm` exists. Nested user-namespace setup is unavailable. No host interfaces, routes, sysctls, or firewall rules were changed.
 
-## Executed checks
+## Workspace checks
 
 | Check | Result |
 | --- | --- |
@@ -29,11 +29,16 @@ The local tool versions for dnsmasq and nftables are distribution binaries, not 
 
 ## GitHub Actions execution
 
-For implementation commit [`553e407`](https://github.com/josephluopooh/router_nix/commit/553e407c2bff76fd3196571fbaf79efdd6a73493), [workflow run 39982556348](https://github.com/josephluopooh/router_nix/actions/runs/39982556348) passed its `config` job. This independently ran `nix flake check --no-build` against the committed lock file, then built the configuration-evaluation, Python policy, and pinned sing-box schema checks. The runner confirmed `/dev/kvm` exists for the separate VM job.
+[Workflow run 39986253394](https://github.com/josephluopooh/router_nix/actions/runs/39986253394) passed both jobs for [`2cff040`](https://github.com/josephluopooh/router_nix/commit/2cff04032c6975d808c517569398a593f7e1951f):
 
-The first VM run **failed** at 16:13 UTC while trying the direct-domain HTTP request. DNS and LAN interception had reached sing-box, which timed out connecting to `198.51.100.10:8080`. The fixture declared its fake public addresses on loopback, but its scripted-networking guest never started the loopback address service. Its Ethernet address was configured normally. The fixture now places those fake public addresses on that Ethernet interface and checks the origin from both the Internet guest and router before testing LAN policy. No production firewall rule was relaxed. Network retries are bounded at 60 seconds, with addresses, routes, listeners, rules and service journals collected on failure. Replacement VM validation is required before claiming an end-to-end pass.
+- `config`: evaluated the committed flake/lock and built the configuration-evaluation, Python policy, and pinned sing-box schema checks.
+- `vm`: built five NixOS guests, including the full nftables checker, and executed the network test under KVM. The test script completed successfully in **46.27 seconds** at 16:24 UTC.
 
-The generated configurations for both test sites also passed the site validator independently in cloud.
+The executed VM checks verified DHCP, LAN SSH reachability, blocked WAN SSH/DNS/proxy ports, redirected UDP DNS and FakeIP answers, IPv6 disablement, TPROXY policy routes, direct and proxy HTTP/TCP traffic selected by domain and IP, WAN NAT, bidirectional WireGuard routing, original LAN source addresses observed at the remote site, failure without direct fallback when sing-box stops, retained management/site connectivity, and recovery after restart.
+
+The initial test run exposed a fixture activation bug: fake Internet addresses declared on loopback were never installed by that guest's scripted network service. Moving those addresses to its configured Ethernet interface fixed direct-origin reachability. A subsequent run reached the source-address capture check and exposed a transient service PATH issue; absolute Nix executable paths fixed that. Both corrections affect only the test fixture. Production firewall and routing rules were preserved. The test now verifies fixture reachability first, bounds network retries at 60 seconds, and collects addresses, routes, listeners, firewall rules and service journals on failure.
+
+The generated configurations for both test sites also passed the site validator independently in the workspace. These results supersede the earlier pending/failed VM status; no live router was deployed.
 
 ## Automated checks provided
 
@@ -41,7 +46,7 @@ The generated configurations for both test sites also passed the site validator 
 
 `checks.x86_64-linux.router-vm` boots five isolated NixOS machines: router A, router B, a DHCP LAN client, a remote LAN client, and a fake Internet/DNS/SOCKS server. It checks DHCP, local management, WAN port blocking, IPv6 policy, policy routing, redirected DNS, FakeIP answers, direct/proxy domain and IP routing via observed source addresses, basic NAT, bidirectional WireGuard site traffic without NAT, and proxy outage/restart behavior. Its public test keys and fake Internet addresses are fixtures, not production credentials.
 
-The GitHub workflow runs these checks on an isolated Linux runner, without router credentials or deployment steps. A written test or successfully evaluated derivation is not evidence that packets passed. The observed configuration-check result is recorded above; no VM success is claimed without its completed result.
+The GitHub workflow runs these checks on an isolated Linux runner, without router credentials or deployment steps. A written test or successfully evaluated derivation is not evidence that packets passed. The completed configuration and VM results are recorded above. General UDP proxy payloads and physical Wi-Fi were not separately exercised by this HTTP/TCP-focused integration test.
 
 Physical NIC identity, disk/boot layout, ISP connectivity, Wi-Fi radio/regulatory operation, real endpoint reachability, actual US egress location, and throughput require the intended hardware and real site parameters. They are intentionally not inferred from cloud tests.
 
