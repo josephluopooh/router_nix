@@ -161,7 +161,7 @@ in pkgs.testers.runNixOSTest {
         client_ip = client.succeed("ip -4 -o addr show dev eth1 | awk '{print $4}' | cut -d/ -f1").strip()
         remote.succeed(f"ping -c 2 {client_ip}")
         # Site B must see the original site A LAN source (no masquerade across WireGuard).
-        remote.succeed("systemd-run --unit=capture timeout 10 tcpdump -U -n -i eth1 -c 1 'icmp and src net 192.168.10.0/24' -w /tmp/site.pcap")
+        remote.succeed("systemd-run --unit=capture ${pkgs.coreutils}/bin/timeout 10 ${pkgs.tcpdump}/bin/tcpdump -U -n -i eth1 -c 1 'icmp and src net 192.168.10.0/24' -w /tmp/site.pcap")
         remote.wait_for_unit("capture.service", timeout=120)
         client.succeed("ping -c 2 192.168.20.50")
         remote.wait_until_succeeds("tcpdump -nn -r /tmp/site.pcap 2>/dev/null | grep '192.168.10.'", timeout=60)
