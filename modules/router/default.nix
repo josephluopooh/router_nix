@@ -42,6 +42,11 @@ in {
       address = mkOption { type = types.str; default = "10.77.0.1/24"; };
       port = mkOption { type = types.port; default = 51820; };
       mtu = mkOption { type = types.ints.between 1280 1500; default = 1380; };
+      endpointRefreshSeconds = mkOption {
+        type = types.ints.unsigned;
+        default = 300;
+        description = "Refresh the WireGuard interface's endpoints at this interval when any peer uses a hostname; 0 disables refresh.";
+      };
       privateKeyFile = secret "/run/secrets/router-wireguard";
       peers = mkOption {
         default = [ ];

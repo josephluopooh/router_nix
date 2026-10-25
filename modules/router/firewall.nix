@@ -4,7 +4,7 @@ let
   q = builtins.toJSON;
   lan = q cfg.lan.interface;
   wan = q cfg.wan.interface;
-  remote = lib.concatMap (p: p.allowedIPs) cfg.wireguard.peers;
+  remote = lib.optionals cfg.wireguard.enable (lib.concatMap (p: p.allowedIPs) cfg.wireguard.peers);
   bypass = lib.unique (cfg.proxy.bypassCIDRs ++ [ cfg.lan.subnet ] ++ remote);
   set = xs: "{ ${lib.concatStringsSep ", " xs} }";
 in {
@@ -48,6 +48,10 @@ in {
             meta nfproto ipv6 drop
             iifname ${lan} ip saddr != ${cfg.lan.subnet} drop
             ct state invalid drop
+            ${lib.optionalString (remote != [ ]) ''
+            # Missing tunnel routes must not send site traffic out the WAN.
+            iifname ${lan} oifname ${wan} ip daddr @sites4 drop
+            ''}
             ${lib.optionalString cfg.proxy.enable ''
             # Never leak FakeIP traffic or unhandled public TCP/UDP to the WAN.
             ip daddr 198.18.0.0/15 drop

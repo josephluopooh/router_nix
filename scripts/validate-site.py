@@ -48,7 +48,9 @@ def validate(cfg):
     if wg["enable"]:
         secret(wg["privateKeyFile"])
         local = ip.ip_interface(wg["address"])
-        require(local.version == 4 and local.ip not in lan, "WireGuard address must be distinct from LAN")
+        require(local.version == 4 and not local.network.overlaps(lan), "WireGuard connected network must be distinct from LAN")
+        if not wan["dhcp"]:
+            require(not local.network.overlaps(ip.ip_interface(wan["address"]).network), "WireGuard connected network must not overlap the WAN network")
         require(wg["peers"], "Enabled WireGuard requires peers")
         for peer in wg["peers"]:
             try:

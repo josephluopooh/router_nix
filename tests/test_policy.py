@@ -76,6 +76,19 @@ class SiteValidation(unittest.TestCase):
         with self.assertRaises(ValueError):
             site.validate(self.cfg)
 
+    def test_wireguard_connected_networks_do_not_overlap(self):
+        self.cfg["wan"].update(dhcp=False, address="192.0.2.1/24", gateway="192.0.2.254")
+        wg = self.cfg["wireguard"] = {
+            "enable": True, "privateKeyFile": "/run/secrets/wg", "address": "10.77.0.1/24",
+            "peers": [{"publicKey": "zo060cy2M+x7cMF4FKXHbs0CloUFDTRHRboFhw5YfVk=", "allowedIPs": ["10.77.0.2/32", "192.168.20.0/24"], "presharedKeyFile": None}],
+        }
+        self.assertTrue(site.validate(self.cfg))
+        for address in ["192.168.11.1/16", "192.0.2.1/24", "192.0.3.1/16"]:
+            with self.subTest(address=address):
+                wg["address"] = address
+                with self.assertRaises(ValueError):
+                    site.validate(self.cfg)
+
 
 class OutboundRendering(unittest.TestCase):
     def setUp(self):

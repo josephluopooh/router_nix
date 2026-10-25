@@ -7,6 +7,10 @@ let cfg = config.router; wg = cfg.wireguard; in {
       mtu = wg.mtu;
       privateKeyFile = wg.privateKeyFile;
       allowedIPsAsRoutes = true;
+      # The networkd backend refreshes endpoints at interface level.
+      dynamicEndpointRefreshSeconds =
+        if builtins.any (p: p.endpoint != null && builtins.match "[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+:[0-9]+" p.endpoint == null) wg.peers
+        then wg.endpointRefreshSeconds else 0;
       peers = map (p: {
         inherit (p) publicKey allowedIPs;
         persistentKeepalive = p.keepalive;
